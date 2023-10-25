@@ -1,0 +1,96 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Create an Application Load Balancer and Target Group
+
+Resources: 
+  TargetGroup:
+      Type: AWS::ElasticLoadBalancingV2::TargetGroup
+      Properties:
+        Name: MyTargetGroup
+        Protocol: HTTP
+        Port: 80
+        TargetGroupAttributes:
+          - Key: deregistration_delay.timeout_seconds
+            Value: '20'
+          - Key: stickiness.enabled   # Enable stickiness
+            Value: 'true'
+        VpcId: 
+          Fn::ImportValue: !Sub VPCId
+        TargetType: instance
+        LoadBalancerArns:
+          - !Ref MyNLB
+        Targets:
+          - Id: !ImportValue EC2-1-Id
+          - Id: !ImportValue EC2-2-Id
+        Matcher:
+            HttpCode: 200,302
+        HealthCheckEnabled: true
+        HealthCheckIntervalSeconds: 10  # The interval between health checks
+        HealthCheckPath: / # The path on the target for health checks
+        HealthCheckPort: 80  # The port to use for health checks
+        HealthCheckProtocol: HTTP  # The protocol to use for health checks (HTTP or HTTPS)
+        HealthCheckTimeoutSeconds: 5  # The amount of time to wait for a response
+        HealthyThresholdCount: 3  # The number of consecutive successful health checks required
+        UnhealthyThresholdCount: 5
+
+  ListenerRuleWithStickiness:
+    Type: 'AWS::ElasticLoadBalancingV2::ListenerRule'
+    Properties:
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+      Conditions:
+        - Field: path-pattern
+          Values:
+            - /  # Specify your path pattern
+      ListenerArn: !Ref Listener
+      Priority: 1  # Adjust the priority as needed
+
+  MyNLB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: MyNLB
+      SecurityGroups: 
+        - !ImportValue SGId
+      Subnets:
+        - !ImportValue Subnet1
+        - !ImportValue Subnet2
+      Scheme: internet-facing
+
+  Listener:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+      LoadBalancerArn: !Ref MyNLB
+      Port: '80'
+      Protocol: HTTP
+
+
+Outputs:
+  LoadBalancerDNSName:
+    Description: DNS name of the Load Balancer
+    Value: !GetAtt MyNLB.DNSName
+
+  LoadBalancerDNS:
+    Description: ARN name of the Load Balancer 
+    Value: !GetAtt MyNLB.DNSName
+    
+
+  TargetGroupArn:
+    Description: ARN of the Target Group
+    Value: !Ref TargetGroup
+    Export:
+      Name: "TGArn"
+
+  ListenerArn: 
+    Description: The listener arn for this load balancer Listener
+    Value: !Ref Listener
+    Export: 
+      Name: "ListnerArn"
+
+  LoadBalancerArn:
+    Description: ARN of the Load Balancer
+    Value: !GetAtt MyNLB.LoadBalancerArn    
+    Export:
+      Name: "LBArn"

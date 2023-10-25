@@ -1,0 +1,64 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Create EC2 Instances
+
+Resources:
+  MyEC2Instance1: 
+      Type: AWS::EC2::Instance
+      Properties: 
+        ImageId: "ami-0fc5d935ebf8bc3bc"
+        KeyName: "N.VIRGINIAKEYPAIR"
+        InstanceType: "t2.micro"
+        NetworkInterfaces: 
+          - AssociatePublicIpAddress: "true"
+            DeviceIndex: "0"
+            GroupSet: 
+              - !ImportValue SGId
+            SubnetId: 
+              Fn::ImportValue: !Sub Subnet1
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            sudo apt-get update -y
+            sudo apt-get install -y apache2
+            sudo systemctl enable --now apache2
+            echo "<h1> WelComeTo Hell One</h1>" > /var/www/html/index.html
+        Tags:
+          - Key: Name
+            Value: Instance-1
+  
+  MyEC2Instance2: 
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: "ami-0fc5d935ebf8bc3bc"
+      KeyName: "N.VIRGINIAKEYPAIR"
+      InstanceType: "t2.micro"
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          GroupSet: 
+            - !ImportValue SGId
+          SubnetId: 
+            Fn::ImportValue: !Sub Subnet1
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          sudo apt-get update -y
+          sudo apt-get install -y apache2
+          sudo systemctl enable --now apache2
+          echo "<h1> WelComeTo Hell Two</h1>" > /var/www/html/index.html
+      Tags:
+        - Key: Name
+          Value: Instance-2
+
+Outputs:
+  EC21Id: 
+    Description: Ec2 1 Id
+    Value: !Ref MyEC2Instance1
+    Export:
+      Name: EC2-1-Id
+
+  EC22Id: 
+    Description: Ec2 2 Id
+    Value: !Ref MyEC2Instance2
+    Export:
+      Name: EC2-2-Id           
